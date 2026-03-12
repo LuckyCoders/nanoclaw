@@ -26,6 +26,7 @@ import {
   stopContainer,
 } from './container-runtime.js';
 import { detectAuthMode } from './credential-proxy.js';
+import { readEnvFile } from './env.js';
 import { validateAdditionalMounts } from './mount-security.js';
 import { RegisteredGroup } from './types.js';
 
@@ -244,6 +245,18 @@ function buildContainerArgs(
   } else {
     args.push('-e', 'CLAUDE_CODE_OAUTH_TOKEN=placeholder');
   }
+
+  // OpenRouter requires explicit model IDs (anthropic/claude-sonnet-4, not claude-sonnet-4)
+  const modelEnv = readEnvFile([
+    'ANTHROPIC_DEFAULT_SONNET_MODEL',
+    'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  ]);
+  const sonnetModel =
+    modelEnv.ANTHROPIC_DEFAULT_SONNET_MODEL || 'anthropic/claude-sonnet-4';
+  const opusModel =
+    modelEnv.ANTHROPIC_DEFAULT_OPUS_MODEL || 'anthropic/claude-sonnet-4';
+  args.push('-e', `ANTHROPIC_DEFAULT_SONNET_MODEL=${sonnetModel}`);
+  args.push('-e', `ANTHROPIC_DEFAULT_OPUS_MODEL=${opusModel}`);
 
   // Runtime-specific args for host gateway resolution
   args.push(...hostGatewayArgs());
