@@ -12,6 +12,7 @@ services:
       NANOCLAW_HOST_PROJECT_ROOT: ${PWD:-.}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./.env:/app/.env:ro
       - ./store:/app/store
       - ./groups:/app/groups
       - ./data:/app/data
