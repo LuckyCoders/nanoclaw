@@ -252,11 +252,14 @@ function buildContainerArgs(
   args.push(...hostGatewayArgs());
 
   // Run as host user so bind-mounted files are accessible.
-  // Skip when running as root (uid 0), as the container's node user (uid 1000),
-  // or when getuid is unavailable (native Windows without WSL).
+  // When nanoclaw runs in Docker: host paths resolve to root-owned dirs on host,
+  // so run agent as root to avoid EACCES on IPC mounts.
   const hostUid = process.getuid?.();
   const hostGid = process.getgid?.();
-  if (hostUid != null && hostUid !== 0 && hostUid !== 1000) {
+  const inDocker = fs.existsSync('/.dockerenv');
+  if (inDocker) {
+    args.push('--user', '0:0');
+  } else if (hostUid != null && hostUid !== 0 && hostUid !== 1000) {
     args.push('--user', `${hostUid}:${hostGid}`);
     args.push('-e', 'HOME=/home/node');
   }
