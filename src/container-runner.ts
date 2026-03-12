@@ -56,6 +56,15 @@ interface VolumeMount {
   readonly: boolean;
 }
 
+/** When nanoclaw runs in Docker, container paths don't resolve on host. Use host root. */
+function toHostPath(containerPath: string): string {
+  const hostRoot = process.env.NANOCLAW_HOST_PROJECT_ROOT;
+  if (!hostRoot) return containerPath;
+  // /app/data/ipc/telegram_main -> hostRoot/data/ipc/telegram_main
+  const rel = containerPath.replace(/^\/app\/?/, '') || '.';
+  return path.join(hostRoot, rel);
+}
+
 function buildVolumeMounts(
   group: RegisteredGroup,
   isMain: boolean,
@@ -63,21 +72,15 @@ function buildVolumeMounts(
   const mounts: VolumeMount[] = [];
   const projectRoot = process.cwd();
   const groupDir = resolveGroupFolderPath(group.folder);
+  const inDocker = fs.existsSync('/.dockerenv');
 
   if (isMain) {
-    // Main gets the project root read-only. Writable paths the agent needs
-    // (group folder, IPC, .claude/) are mounted separately below.
-    // Read-only prevents the agent from modifying host application code
-    // (src/, dist/, package.json, etc.) which would bypass the sandbox
-    // entirely on next restart.
     mounts.push({
-      hostPath: projectRoot,
+      hostPath: inDocker ? toHostPath(projectRoot) : projectRoot,
       containerPath: '/workspace/project',
       readonly: true,
     });
 
-    // Shadow .env so the agent cannot read secrets from the mounted project root.
-    // Credentials are injected by the credential proxy, never exposed to containers.
     const envFile = path.join(projectRoot, '.env');
     if (fs.existsSync(envFile)) {
       mounts.push({
@@ -87,26 +90,22 @@ function buildVolumeMounts(
       });
     }
 
-    // Main also gets its group folder as the working directory
     mounts.push({
-      hostPath: groupDir,
+      hostPath: inDocker ? toHostPath(groupDir) : groupDir,
       containerPath: '/workspace/group',
       readonly: false,
     });
   } else {
-    // Other groups only get their own folder
     mounts.push({
-      hostPath: groupDir,
+      hostPath: inDocker ? toHostPath(groupDir) : groupDir,
       containerPath: '/workspace/group',
       readonly: false,
     });
 
-    // Global memory directory (read-only for non-main)
-    // Only directory mounts are supported, not file mounts
     const globalDir = path.join(GROUPS_DIR, 'global');
     if (fs.existsSync(globalDir)) {
       mounts.push({
-        hostPath: globalDir,
+        hostPath: inDocker ? toHostPath(globalDir) : globalDir,
         containerPath: '/workspace/global',
         readonly: true,
       });
@@ -158,19 +157,18 @@ function buildVolumeMounts(
     }
   }
   mounts.push({
-    hostPath: groupSessionsDir,
+    hostPath: inDocker ? toHostPath(groupSessionsDir) : groupSessionsDir,
     containerPath: '/home/node/.claude',
     readonly: false,
   });
 
   // Per-group IPC namespace: each group gets its own IPC directory
-  // This prevents cross-group privilege escalation via IPC
   const groupIpcDir = resolveGroupIpcPath(group.folder);
   fs.mkdirSync(path.join(groupIpcDir, 'messages'), { recursive: true });
   fs.mkdirSync(path.join(groupIpcDir, 'tasks'), { recursive: true });
   fs.mkdirSync(path.join(groupIpcDir, 'input'), { recursive: true });
   mounts.push({
-    hostPath: groupIpcDir,
+    hostPath: inDocker ? toHostPath(groupIpcDir) : groupIpcDir,
     containerPath: '/workspace/ipc',
     readonly: false,
   });
@@ -192,7 +190,6 @@ function buildVolumeMounts(
     group.folder,
     'agent-runner-src',
   );
-  const inDocker = fs.existsSync('/.dockerenv');
   if (!inDocker) {
     if (!fs.existsSync(groupAgentRunnerDir) && fs.existsSync(agentRunnerSrc)) {
       fs.cpSync(agentRunnerSrc, groupAgentRunnerDir, { recursive: true });

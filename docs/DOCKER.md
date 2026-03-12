@@ -16,17 +16,21 @@ nano .env
 ./container/build.sh
 ```
 
-## 3. Создай mount allowlist (один раз)
+## 3. Создай директории и mount allowlist
 
 ```bash
+mkdir -p store groups data logs config
 docker compose run --rm nanoclaw npx tsx setup/index.ts --step mounts -- --empty
 ```
 
-## 4. Запусти
+## 4. Запусти (из папки проекта!)
 
 ```bash
+cd /path/to/nanoclaw
 docker compose up -d
 ```
+
+Важно: запускай из папки проекта — `PWD` нужен для путей.
 
 ## 5. Зарегистрируй Telegram-чат
 
@@ -59,12 +63,21 @@ tail -f logs/nanoclaw.log  # внутри volume
 docker compose down
 ```
 
-## Ошибка "No inputs were found in config file"
+## Ошибка EACCES на /workspace/ipc/input
 
-Исправлено: при запуске nanoclaw в Docker монтирование agent-runner-src пропускается (агент использует встроенный код). Обнови и перезапусти:
+Исправлено: используются bind mounts для корректных путей. Обнови, пересоздай и перезапусти:
 
 ```bash
 git pull origin main
+mkdir -p store groups data logs config
+docker compose run --rm nanoclaw npx tsx setup/index.ts --step mounts -- --empty
+docker compose down
 docker compose build
 docker compose up -d
 ```
+
+Если были данные в старых volumes — скопируй: `docker run --rm -v nanoclaw_nanoclaw_data:/from -v $(pwd)/data:/to alpine cp -a /from/. /to/`
+
+## Ошибка "No inputs were found in config file"
+
+Исправлено: при запуске nanoclaw в Docker монтирование agent-runner-src пропускается (агент использует встроенный код).

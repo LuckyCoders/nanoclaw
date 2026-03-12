@@ -7,22 +7,15 @@ services:
     env_file: .env
     environment:
       HOME: /app
-      # Контейнеры агентов подключаются к credential proxy по host.docker.internal
       CREDENTIAL_PROXY_HOST: 0.0.0.0
+      # Host path for agent mounts (paths from nanoclaw container don't resolve on host)
+      NANOCLAW_HOST_PROJECT_ROOT: ${PWD:-.}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - nanoclaw_store:/app/store
-      - nanoclaw_groups:/app/groups
-      - nanoclaw_data:/app/data
-      - nanoclaw_logs:/app/logs
-      - nanoclaw_config:/app/.config/nanoclaw
-    # Порт credential proxy — агенты подключаются через host
+      - ./store:/app/store
+      - ./groups:/app/groups
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config:/app/.config/nanoclaw
     ports:
       - "3001:3001"
-
-volumes:
-  nanoclaw_store:
-  nanoclaw_groups:
-  nanoclaw_data:
-  nanoclaw_logs:
-  nanoclaw_config:
