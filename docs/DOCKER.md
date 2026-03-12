@@ -58,3 +58,16 @@ tail -f logs/nanoclaw.log  # внутри volume
 ```bash
 docker compose down
 ```
+
+## Ошибка "No inputs were found in config file"
+
+Если агент падает с `TS18003: No inputs were found`, пересобери образ и очисти кэш:
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+# Удали пустую папку agent-runner-src (если была создана до фикса)
+docker compose exec nanoclaw rm -rf /app/data/sessions/telegram_main/agent-runner-src 2>/dev/null || true
+docker compose restart nanoclaw
+```

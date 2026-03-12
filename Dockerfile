@@ -12,6 +12,7 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 COPY setup ./setup
+COPY container ./container
 RUN npm run build
 
 # Config dir for mount allowlist (created at runtime if needed)
