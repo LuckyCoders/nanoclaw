@@ -178,6 +178,8 @@ function buildVolumeMounts(
   // Copy agent-runner source into a per-group writable location so agents
   // can customize it (add tools, change behavior) without affecting other
   // groups. Recompiled on container startup via entrypoint.sh.
+  // Skip mount when nanoclaw runs in Docker: hostPath resolves to wrong/empty
+  // dir on host (volume path != host path). Agent uses baked-in /app/src.
   const agentRunnerSrc = path.join(
     projectRoot,
     'container',
@@ -190,14 +192,21 @@ function buildVolumeMounts(
     group.folder,
     'agent-runner-src',
   );
-  if (!fs.existsSync(groupAgentRunnerDir) && fs.existsSync(agentRunnerSrc)) {
-    fs.cpSync(agentRunnerSrc, groupAgentRunnerDir, { recursive: true });
+  const inDocker = fs.existsSync('/.dockerenv');
+  if (!inDocker) {
+    if (!fs.existsSync(groupAgentRunnerDir) && fs.existsSync(agentRunnerSrc)) {
+      fs.cpSync(agentRunnerSrc, groupAgentRunnerDir, { recursive: true });
+    }
+    const hasAgentRunnerSrc = fs.existsSync(groupAgentRunnerDir) &&
+      fs.readdirSync(groupAgentRunnerDir).some((f) => f.endsWith('.ts'));
+    if (hasAgentRunnerSrc) {
+      mounts.push({
+        hostPath: groupAgentRunnerDir,
+        containerPath: '/app/src',
+        readonly: false,
+      });
+    }
   }
-  mounts.push({
-    hostPath: groupAgentRunnerDir,
-    containerPath: '/app/src',
-    readonly: false,
-  });
 
   // Additional mounts validated against external allowlist (tamper-proof from containers)
   if (group.containerConfig?.additionalMounts) {
