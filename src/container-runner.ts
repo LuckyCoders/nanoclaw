@@ -197,7 +197,8 @@ function buildVolumeMounts(
     if (!fs.existsSync(groupAgentRunnerDir) && fs.existsSync(agentRunnerSrc)) {
       fs.cpSync(agentRunnerSrc, groupAgentRunnerDir, { recursive: true });
     }
-    const hasAgentRunnerSrc = fs.existsSync(groupAgentRunnerDir) &&
+    const hasAgentRunnerSrc =
+      fs.existsSync(groupAgentRunnerDir) &&
       fs.readdirSync(groupAgentRunnerDir).some((f) => f.endsWith('.ts'));
     if (hasAgentRunnerSrc) {
       mounts.push({
