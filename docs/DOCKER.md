@@ -63,6 +63,19 @@ tail -f logs/nanoclaw.log  # внутри volume
 docker compose down
 ```
 
+## Отладка "Claude Code process exited with code 1"
+
+Включи подробный вывод SDK:
+
+```bash
+# В .env добавь:
+NANOCLAW_DEBUG=1
+
+docker compose restart nanoclaw
+```
+
+Затем отправь сообщение боту и смотри `docker compose logs -f nanoclaw` — там будет больше деталей.
+
 ## Ошибка EACCES на /workspace/ipc/input
 
 Исправлено: используются bind mounts для корректных путей. Обнови, пересоздай и перезапусти:

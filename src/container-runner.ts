@@ -269,6 +269,10 @@ function buildContainerArgs(
   const inDocker = fs.existsSync('/.dockerenv');
   if (inDocker) {
     args.push('--user', '0:0');
+    args.push('-e', 'HOME=/home/node'); // SDK uses ~/.claude, we mount there
+    if (process.env.NANOCLAW_DEBUG === '1') {
+      args.push('-e', 'DEBUG_SDK=1');
+    }
   } else if (hostUid != null && hostUid !== 0 && hostUid !== 1000) {
     args.push('--user', `${hostUid}:${hostGid}`);
     args.push('-e', 'HOME=/home/node');
